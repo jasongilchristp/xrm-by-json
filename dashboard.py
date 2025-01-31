@@ -111,8 +111,8 @@ def user_dashboard(df):
                 st.info("No matching contacts found.")
         else:
             st.info("No contacts available to edit.")
-        with tab3:
-            delete_contact(df)
+    with tab4:
+        delete_contact(df)
     
 
 def admin_dashboard():
