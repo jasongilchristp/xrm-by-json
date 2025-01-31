@@ -5,11 +5,8 @@ import os
 import json
 import pandas as pd
 import hashlib
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_PASSWORD = "MMMGA45678"
 
 # --- Utility Functions ---
 def load_session():
