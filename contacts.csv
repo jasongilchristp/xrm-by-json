@@ -1,3 +1,4 @@
-First Name,Middle Name,Surname,Email,Phone,ID,Name
-Jason,Gilchrist,Paladugu,thegilchristway@gmail.com,8660056268,J20250131235933,Jason Gilchrist Paladugu
-John,Doe,Smith,john.smith@example.com,1234567890,,John Doe Smith
+First Name,Middle Name,Surname,Email,Phone,ID,Name,FirstLetter,Full Name
+Jason,Gilchrist,P,thegilchristway@gmail.com,8660056268,,,,
+Jason,Gilchrist,P,thegilchristway@gmail.com,8660056268,,,,
+Jason,Gilchrist,P,thegilchristway@gmail.com,08660056268,,,,

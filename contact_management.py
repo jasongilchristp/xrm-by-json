@@ -5,7 +5,6 @@ from utils import generate_contact_id, save_data, CONTACTS_FILE
 import logging # For debugging
 
 # --- Contact Management Functions ---
-
 def view_contacts(df):
     """Displays contacts in a DataFrame with search and filter functionality."""
     st.subheader("View Contacts")
@@ -26,6 +25,11 @@ def view_contacts(df):
         
         # Create Full Name column for display
         df['Full Name'] = df[['First Name', 'Middle Name', 'Surname']].fillna('').agg(' '.join, axis=1).str.strip()
+        
+        # Handle any NaN or empty space issues in Full Name column
+        df['Full Name'] = df['Full Name'].replace('', 'No Name')  # Set default value for empty names
+        
+        # Generate FirstLetter column for filter
         df['FirstLetter'] = df['First Name'].str[0].str.upper()  # Extract first letter from First Name
         df['FirstLetter'] = df['FirstLetter'].replace('', np.nan)  # Replace empty strings with NaN
         df['FirstLetter'] = df['FirstLetter'].astype(pd.StringDtype())  # Ensure proper string dtype
@@ -78,70 +82,62 @@ def view_contacts(df):
     else:
         st.info("No contacts found. Add your first contact below.")
 
+# --- Add Contact Function ---
 def add_contact(df):
-    """Handles adding a new contact with improved UI."""
-    st.subheader("Add New Contact")
+    """Add a new contact."""
+    st.subheader("Add Contact")
     st.markdown("---")
     
-    first_name = st.text_input("First Name")
-    middle_name = st.text_input("Middle Name", value="") # Middle name is optional
-    surname = st.text_input("Surname")
-    email = st.text_input("Email")
-    phone = st.text_input("Phone")
+    # Create fields for contact information
+    first_name = st.text_input("First Name", key="add_first_name")
+    middle_name = st.text_input("Middle Name", key="add_middle_name")
+    surname = st.text_input("Surname", key="add_surname")
+    email = st.text_input("Email", key="add_email")
+    phone = st.text_input("Phone", key="add_phone")
     
-    if st.button("Add Contact", use_container_width=True):
-        if not first_name or not surname or not email or not phone:
-            st.error("Please fill in all fields.")
-        elif not phone.isdigit() or len(phone) != 10:
-            st.error("Phone number must be 10 digits and numeric.")
-        elif "@" not in email or "." not in email:
-            st.error("Invalid email format.")
-        else:
-            full_name = f"{first_name} {middle_name} {surname}".strip() # Construct full name for ID generation (still used for ID)
-            contact_id = generate_contact_id(full_name)
-            new_contact = pd.DataFrame({
-                'ID': [contact_id],
-                'First Name': [first_name],
-                'Middle Name': [middle_name],
-                'Surname': [surname],
-                'Email': [email],
-                'Phone': [phone]
-            })
-            df = pd.concat([df, new_contact], ignore_index=True)
-            df['Name'] = (df['First Name'] + ' ' + df['Middle Name'] + ' ' + df['Surname']).str.strip()
+    if st.button("Save", use_container_width=True):
+        # Validation: Check if all fields are filled
+        if not first_name or not middle_name or not surname or not email or not phone:
+            st.error("Please fill in all the fields! First Name, Middle Name, Surname, Email, and Phone are required.")
+            return
+        
+        # Add contact to the DataFrame
+        new_contact = pd.DataFrame({
+            'First Name': [first_name],
+            'Middle Name': [middle_name],
+            'Surname': [surname],
+            'Email': [email],
+            'Phone': [phone]
+        })
+        
+        df = pd.concat([df, new_contact], ignore_index=True)
+        save_data(df, "contacts.csv")
+        st.success(f"Contact {first_name} {middle_name} {surname} added successfully!")
+        st.rerun()
 
-            # Sort after adding new contact
-            df = df.sort_values('Name', ignore_index=True)
-            save_data(df, CONTACTS_FILE)
-            st.success("Contact added successfully!")
-            st.rerun()
-
+# --- Edit Contact Function ---
 def edit_contact(df):
     """Edit an existing contact."""
     st.subheader("Edit Contact")
     st.markdown("---")
     
     if not df.empty:
-        # Create a copy and ensure proper data types
         df = df.copy()
-        df = df.astype({'Name': str, 'Email': str, 'Phone': str})
-        
-        logging.basicConfig(level=logging.INFO)
-        logging.info(f"Data types in DataFrame: {df.dtypes}")
-        logging.info(f"First few entries in 'Name' column: {df['Name'].head()}")
+        df = df.astype({'First Name': str, 'Middle Name': str, 'Surname': str, 'Email': str, 'Phone': str})
         
         # Sort contacts alphabetically by name
-        df = df.sort_values('Name', ignore_index=True)
+        df = df.sort_values(['First Name', 'Middle Name', 'Surname'], ignore_index=True)
         
         # Display total contacts metric
         total_contacts = len(df)
         st.metric("Total Contacts", total_contacts)
         st.markdown("---")
         
-        # Create filter options
-        df['Name'] = df['Name'].fillna('').astype(str)
-        df['FirstLetter'] = df['Name'].str[0].str.upper()
-        df['FirstLetter'] = df['FirstLetter'].replace('', np.nan)
+        # Create Full Name column for display
+        df['Full Name'] = df[['First Name', 'Middle Name', 'Surname']].fillna('').agg(' '.join, axis=1).str.strip()
+        df['FirstLetter'] = df['First Name'].str[0].str.upper()  # Extract first letter from First Name
+        df['FirstLetter'] = df['FirstLetter'].replace('', np.nan)  # Replace empty strings with NaN
+        df['FirstLetter'] = df['FirstLetter'].astype(pd.StringDtype())  # Ensure proper string dtype
         
         letters = sorted(df['FirstLetter'].dropna().unique())
         
@@ -178,20 +174,23 @@ def edit_contact(df):
                 surname = st.text_input("Surname", value=contact['Surname'], key=f"edit_surname_{idx}")
                 email = st.text_input("Email", value=contact['Email'], key=f"edit_email_{idx}")
                 phone = st.text_input("Phone", value=contact['Phone'], key=f"edit_phone_{idx}")
+                
                 if st.button("Save", key=f"edit_contact_save_{idx}_1", use_container_width=True):
-                    try:
-                        # Update contact using loc
-                        df.loc[idx, 'First Name'] = first_name
-                        df.loc[idx, 'Middle Name'] = middle_name
-                        df.loc[idx, 'Surname'] = surname
-                        df.loc[idx, 'Email'] = email
-                        df.loc[idx, 'Phone'] = phone
-                        save_data(df, CONTACTS_FILE)
-                        full_name = f"{first_name} {middle_name} {surname}".strip()
-                        st.success(f"Contact {full_name} updated successfully!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error updating contact: {str(e)}")
+                    # Validation: Check if all fields are filled
+                    if not first_name or not middle_name or not surname or not email or not phone:
+                        st.error("Please fill in all the fields! First Name, Middle Name, Surname, Email, and Phone are required.")
+                        return
+                    
+                    # Update contact
+                    df.loc[idx, 'First Name'] = first_name
+                    df.loc[idx, 'Middle Name'] = middle_name
+                    df.loc[idx, 'Surname'] = surname
+                    df.loc[idx, 'Email'] = email
+                    df.loc[idx, 'Phone'] = phone
+                    
+                    save_data(df, "contacts.csv")
+                    st.success(f"Contact {first_name} {middle_name} {surname} updated successfully!")
+                    st.rerun()
                 
                 st.markdown("---")
         else:

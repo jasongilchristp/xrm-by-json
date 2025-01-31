@@ -29,8 +29,14 @@ def load_data(file_path):
         return pd.DataFrame(columns=['ID', 'First Name', 'Middle Name', 'Surname', 'Email', 'Phone'])
     return pd.DataFrame(columns=['Username', 'Password'])
 
+
 def save_data(df, file_path):
-    df.to_csv(file_path, index=False)
+    """Save the DataFrame to a CSV file."""
+    try:
+        df.to_csv(file_path, index=False)  # Save without row index
+    except Exception as e:
+        st.error(f"Error saving data to file: {str(e)}")
+
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
