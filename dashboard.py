@@ -21,7 +21,7 @@ def user_dashboard(df):
     st.markdown("---")
     
     # Create tabs for different functionalities
-    tab1, tab2, tab3 = st.tabs(["View Contacts", "Add Contact", "Edit Contact"])
+    tab1, tab2, tab3, tab4 = st.tabs(["View Contacts", "Add Contact", "Edit Contact", "Delete Contact"])
     
     with tab1:
         view_contacts(df)
@@ -111,6 +111,9 @@ def user_dashboard(df):
                 st.info("No matching contacts found.")
         else:
             st.info("No contacts available to edit.")
+        with tab3:
+            delete_contact(df)
+    
 
 def admin_dashboard():
     """Admin dashboard with user and contact management."""
