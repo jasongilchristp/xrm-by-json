@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from utils import generate_contact_id, save_data, CONTACTS_FILE
 import logging # For debugging
+import time 
 
 # --- Contact Management Functions ---
 def view_contacts(df):
@@ -112,61 +113,59 @@ def add_contact(df):
         
         df = pd.concat([df, new_contact], ignore_index=True)
         save_data(df, "contacts.csv")
-        st.success(f"Contact {first_name} {middle_name} {surname} added successfully!")
-        st.rerun()
+        st.success(f"✅ Contact for {first_name} {middle_name} {surname} added successfully!")
+        st.balloons()  # 🎈 Fun visual effect for user addition
+        time.sleep(1)  # Short delay for visibility 
+        st.rerun()  
+
 
 # --- Edit Contact Function ---
 def edit_contact(df):
     """Edit an existing contact."""
     st.subheader("Edit Contact")
     st.markdown("---")
-    
+
+    # Ensure session state stores contacts
+    if "contacts_df" not in st.session_state:
+        st.session_state.contacts_df = df.copy()
+
+    df = st.session_state.contacts_df
+
     if not df.empty:
-        df = df.copy()
         df = df.astype({'First Name': str, 'Middle Name': str, 'Surname': str, 'Email': str, 'Phone': str})
         
-        # Sort contacts alphabetically by name
+        # Sort contacts alphabetically
         df = df.sort_values(['First Name', 'Middle Name', 'Surname'], ignore_index=True)
-        
-        # Display total contacts metric
-        total_contacts = len(df)
-        st.metric("Total Contacts", total_contacts)
+
+        # Display total contacts
+        st.metric("Total Contacts", len(df))
         st.markdown("---")
-        
-        # Create Full Name column for display
+
+        # Create 'Full Name' for display
         df['Full Name'] = df[['First Name', 'Middle Name', 'Surname']].fillna('').agg(' '.join, axis=1).str.strip()
-        df['FirstLetter'] = df['First Name'].str[0].str.upper()  # Extract first letter from First Name
-        df['FirstLetter'] = df['FirstLetter'].replace('', np.nan)  # Replace empty strings with NaN
-        df['FirstLetter'] = df['FirstLetter'].astype(pd.StringDtype())  # Ensure proper string dtype
-        
+        df['FirstLetter'] = df['First Name'].str[0].str.upper()
+        df['FirstLetter'] = df['FirstLetter'].replace('', np.nan)
+        df['FirstLetter'] = df['FirstLetter'].astype(pd.StringDtype())
+
         letters = sorted(df['FirstLetter'].dropna().unique())
-        
-        # Create two columns for search and filter
+
+        # Search and Filter Controls
         col1, col2 = st.columns([3, 1])
-        
         with col1:
             search_term = st.text_input("Search contacts by name, email, or phone", key="edit_contact_search")
-        
         with col2:
-            selected_letter = st.selectbox(
-                "Filter by letter",
-                ["All"] + letters,
-                key="edit_contact_letter_filter"
-            )
-        
-        # Apply filters
+            selected_letter = st.selectbox("Filter by letter", ["All"] + letters, key="edit_contact_letter_filter")
+
+        # Apply search & filter
         filtered_df = df.copy()
-        
         if search_term:
-            # Apply search filter
             mask = filtered_df.apply(lambda x: x.astype(str).str.contains(search_term, case=False)).any(axis=1)
             filtered_df = filtered_df[mask]
-        
+
         if selected_letter != "All":
-            # Apply letter filter
             filtered_df = filtered_df[filtered_df['FirstLetter'] == selected_letter]
-        
-        # Display results with edit fields
+
+        # Display editable fields
         if not filtered_df.empty:
             for idx, contact in filtered_df.iterrows():
                 first_name = st.text_input("First Name", value=contact['First Name'], key=f"edit_first_name_{idx}")
@@ -174,24 +173,26 @@ def edit_contact(df):
                 surname = st.text_input("Surname", value=contact['Surname'], key=f"edit_surname_{idx}")
                 email = st.text_input("Email", value=contact['Email'], key=f"edit_email_{idx}")
                 phone = st.text_input("Phone", value=contact['Phone'], key=f"edit_phone_{idx}")
-                
+
                 if st.button("Save", key=f"edit_contact_save_{idx}_1", use_container_width=True):
-                    # Validation: Check if all fields are filled
-                    if not first_name or not middle_name or not surname or not email or not phone:
-                        st.error("Please fill in all the fields! First Name, Middle Name, Surname, Email, and Phone are required.")
+                    # Validate inputs
+                    if not all([first_name, middle_name, surname, email, phone]):
+                        st.error("All fields are required! Please fill them in.")
                         return
-                    
-                    # Update contact
-                    df.loc[idx, 'First Name'] = first_name
-                    df.loc[idx, 'Middle Name'] = middle_name
-                    df.loc[idx, 'Surname'] = surname
-                    df.loc[idx, 'Email'] = email
-                    df.loc[idx, 'Phone'] = phone
-                    
-                    save_data(df, "contacts.csv")
-                    st.success(f"Contact {first_name} {middle_name} {surname} updated successfully!")
+
+                    # Update contact in session state
+                    st.session_state.contacts_df.loc[idx, 'First Name'] = first_name
+                    st.session_state.contacts_df.loc[idx, 'Middle Name'] = middle_name
+                    st.session_state.contacts_df.loc[idx, 'Surname'] = surname
+                    st.session_state.contacts_df.loc[idx, 'Email'] = email
+                    st.session_state.contacts_df.loc[idx, 'Phone'] = phone
+
+                    save_data(st.session_state.contacts_df, "contacts.csv")
+                    st.success(f"✅ Contact {first_name} {middle_name} {surname} updated successfully!")
+                    st.snow()
+                    time.sleep(1)  
                     st.rerun()
-                
+
                 st.markdown("---")
         else:
             st.info("No matching contacts found.")
@@ -268,8 +269,12 @@ def delete_contact(df):
                             # Clear confirmation state
                             if confirm_key in st.session_state:
                                 del st.session_state[confirm_key]
-                            st.success(f"Contact {contact['Name']} deleted successfully!")
-                            st.rerun()
+                            st.success(f"✅ Contact {contact['Name']} deleted successfully!")
+                            time.sleep(1)  # Short delay for visibility 
+                            st.rerun()  
+
+
+
                         except Exception as e:
                             st.error(f"Error deleting contact: {str(e)}")
                     else:
